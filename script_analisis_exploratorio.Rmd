@@ -1,0 +1,136 @@
+---
+title: "script_analisis_exploratorio"
+author: "Jesus Manuel Vicente Garcia"
+date: "11 de marzo de 2018"
+output: html_document
+---
+
+```{r 1. OBJETIVO DEL ANÁLISIS}
+#Con este Análisis se pretende determinar si es posible determinar la nota final G3 a partir de alguna otra variable del Dataset. 
+```
+
+
+```{r 2. CARGA DE DATOS}
+library(knitr)
+
+#Establecemos nuestro directorio de trabajo
+currentDir <- getwd()
+
+#Comprobamos y creamos el directorio en caso de ser necesario
+if (!file.exists("./datos")){
+  dir.create("./datos")
+}
+
+#Descargamos los datos de la URL
+fileURL <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00320/student.zip"
+download.file(fileURL,destfile = "./datos/student.zip",method = "curl")
+unzip("./datos/student.zip",exdir = "./datos")
+list.files("./datos")
+
+fechaDescarga <- date()
+fechaDescarga
+
+#Leemos los datos de los ficheros descargados
+studentMat <- read.table("./datos/student-mat.csv",row.names = NULL, sep = ";", header = TRUE)
+
+studentPor <- read.table("./datos/student-por.csv",row.names = NULL, sep = ";", header = TRUE)
+
+#Unimos ambos datasets
+studentAll <- merge(studentMat,studentPor,by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"))
+print(nrow(studentAll)) # 382 estudiantes
+
+```
+
+
+
+```{r 3. ANALISIS DESCRIPTIVO}
+#Lo primero que haremos será comprobar si hay NAs y en caso de que sea posible, los eliminaremos
+rowNastudentAll <- studentAll[rowSums(is.na(studentAll)) > 0,] 
+dim(rowNastudentAll) #No hay Nas en filas
+colNastudentAll <- studentAll[,colSums(is.na(studentAll)) > 0] 
+dim(colNastudentAll) #No hay Nas en columnas
+
+#Ahora describiremos los datos usando las funciones indicadas para ello
+names(studentAll) #Observamos que la nomenclatura de los nombres es correcto.
+
+summary(studentAll) #Mediante esta función obtenemos estadísticas de los campos del dataset
+                    #Se observan grandes desequilibrios en algunos campos como school,                         adrress(la gran mayoría viven en ciudad) e internet (la inmensa mayoría                     tiene acceso. En cuanto al sexo prácticamente es mitad y mitad.
+
+
+quantile(studentAll$G3.x) #La mayoría de alumnos de 'Mat' está en los percentiles 50 y 75
+quantile(studentAll$G3.y) #Los alumnos de 'Por' están más repartidos entre los percentiles
+
+
+```
+
+```{r 4. ANALISIS EXPLORATORIO}
+library(ggplot2)
+#######Buscaremos relaciones entre la variable G3 y el resto para ver si se puede predecir su valor a partir de alguna de ellas
+
+###Relacion entre la media de la nota G3 y la disponibilidad de Internet
+
+#Mat
+tapply(studentAll$G3.x,studentAll$internet,mean) #Casi 1p más si se dispone de conexion
+#Por
+tapply(studentAll$G3.y,studentAll$internet,mean) #Apenas medio punto más con conexión
+
+
+###Ahora mediante un gráfico buscaremos si existe relación entre G3 y el tiempo de estudio
+
+#Mat
+plotStudyTimeMat <- qplot(studytime.x, G3.x, data = studentAll)
+plotStudyTimeMat #No es determinante para poder predecir la nota G3
+
+#Por
+plotStudyTimePor <- qplot(studytime.y, G3.y, data = studentAll)
+plotStudyTimePor #Se observa algo más de relación, más horas de estudio -> más nota
+
+###Relacion entre la nota G3 y las ausencias
+
+#Mat
+plotAbsenceMat <- qplot(absences.x, G3.x, data = studentAll)
+plotAbsenceMat  #No existe toda la dependencia que se podría esperar, aunque en torno a                    las 20 ausencias las notas son algo peores
+
+#Por
+plotAbsencePor <- qplot(absences.y, G3.y, data = studentAll)
+plotAbsencePor #No existe toda la dependencia que se podría esperar, aunque en torno a                    las 20 ausencias las notas son algo peores
+
+
+###Relacion entre la nota G3 y la salud
+
+#Mat
+plotHealthMat <- qplot(health.x, G3.x, data = studentAll)
+plotHealthMat #No existe dependencia
+
+#Por
+plotHealthPor <- qplot(health.y, G3.y, data = studentAll)
+plotHealthPor #No existe dependencia
+
+###Relacion entre la nota G3 y la escuela
+
+#Mat
+plotSchoolMat <- qplot(school, G3.x, data = studentAll)
+plotSchoolMat #Apenas existe diferencia
+#Por
+plotSchoolPor <- qplot(school, G3.y, data = studentAll)
+plotSchoolPor #Mejores resultados en el colegio MS
+
+
+###Relacion entre la nota G3 y el soporte educativo familiar
+
+#Mat
+plotFamSupMat <- qplot(famsup.x, G3.x, data = studentAll)
+plotFamSupMat #Apenas existe diferencia
+#Por
+plotFamSupPor <- qplot(famsup.y, G3.y, data = studentAll)
+plotFamSupPor #Apenas existe diferencia
+
+
+```
+
+
+```{r 5. CONCLUSION}
+#Con los resultados obtenidos, podemos decir que este Dataset no es de gran utilidad para el objetivo planteado en la introducción y tampoco se han encontrado variables óptimas para la predicción. 
+
+```
+
